@@ -13,7 +13,7 @@ import {
   Title
 } from "solid-start";
 import Nav from "./components/nav";
-import "./root.css";
+import * as styles from "./root.css";
 
 export default function Root() {
   return (
@@ -25,7 +25,7 @@ export default function Root() {
         <Meta name="description" content="Hacker News Clone built with Solid" />
         <Link rel="manifest" href="/manifest.webmanifest" />
       </Head>
-      <Body>
+      <Body class={styles.body}>
         <Nav />
         <ErrorBoundary>
           <Suspense fallback={<div class="news-list-nav">Loading...</div>}>

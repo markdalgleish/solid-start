@@ -13,6 +13,7 @@ import {
   Title
 } from "solid-start";
 import Nav from "./components/nav";
+import "./hello.css";
 import * as styles from "./root.css";
 
 export default function Root() {

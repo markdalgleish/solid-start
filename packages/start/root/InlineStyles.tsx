@@ -58,7 +58,7 @@ export function InlineStyles() {
           return (
             <Style>
               {Object.entries(resource)
-                .filter(([k]) => k.endsWith(".css"))
+                .filter(([k]) => k.endsWith(".css") || k.endsWith(".css.ts"))
                 .map(([k, v]) => {
                   return `/* ${k} */\n` + v;
                 })

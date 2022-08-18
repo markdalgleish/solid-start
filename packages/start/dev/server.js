@@ -1,9 +1,61 @@
+import { setAdapter } from "@vanilla-extract/css/adapter";
+import { transformCss } from "@vanilla-extract/css/transformCss";
 import debug from "debug";
 import { once } from "events";
 import path from "path";
 import { Readable } from "stream";
 import { createRequest } from "../node/fetch.js";
 import "../node/globals.js";
+
+function stringifyFileScope({ packageName, filePath }) {
+  return packageName ? `${filePath}$$$${packageName}` : filePath;
+}
+
+const bufferedCSSObjs = new Map();
+const cssByFileScope = new Map();
+const localClassNames = new Set();
+const composedClassLists = new Array();
+const usedCompositions = new Set();
+
+setAdapter({
+  appendCss: (cssObj, fileScope) => {
+    const fileScopeKey = stringifyFileScope(fileScope);
+    let fileScopeCss = bufferedCSSObjs.get(fileScopeKey);
+
+    if (!fileScopeCss) {
+      fileScopeCss = [];
+      bufferedCSSObjs.set(fileScopeKey, fileScopeCss);
+    }
+
+    fileScopeCss.push(cssObj);
+  },
+  registerClassName: className => {
+    localClassNames.add(className);
+  },
+  registerComposition: composition => {
+    composedClassLists.push(composition);
+  },
+  markCompositionUsed: className => {
+    usedCompositions.add(className);
+  },
+  getIdentOption: () => "debug",
+  onEndFileScope: fileScope => {
+    const fileScopeKey = stringifyFileScope(fileScope);
+    const cssObjs = bufferedCSSObjs.get(fileScopeKey);
+
+    const css = cssObjs
+      ? transformCss({
+          localClassNames: Array.from(localClassNames),
+          composedClassLists,
+          cssObjs
+        }).join("\n")
+      : "";
+
+    cssByFileScope.set(fileScopeKey, css);
+
+    bufferedCSSObjs.set(fileScopeKey, []);
+  }
+});
 
 globalThis.DEBUG = debug("start:server");
 
@@ -37,6 +89,12 @@ export function createDevHandler(viteServer, config, options) {
           for (const dep of deps) {
             const parsed = new URL(dep.url, "http://localhost/");
             const query = parsed.searchParams;
+
+            if (dep.file.endsWith(".css.ts")) {
+              styles[dep.url] = cssByFileScope.get(
+                dep.url.replace(/^\//, "") + "$$$example-hackernews" // hack
+              );
+            }
 
             if (
               style_pattern.test(dep.file) ||
